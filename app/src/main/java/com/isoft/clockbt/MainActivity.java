@@ -144,6 +144,7 @@ public class MainActivity extends AppCompatActivity {
                 try {
                     btSocket.close();
                     btConnected = false;
+                    alreadyChanged = false;
                     Toast.makeText(this, "Bluetooth device disconnected", Toast.LENGTH_SHORT).show();
                 } catch (IOException e) {
                     e.printStackTrace();
