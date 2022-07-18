@@ -4,8 +4,10 @@ import android.Manifest;
 import android.bluetooth.BluetoothAdapter;
 import android.bluetooth.BluetoothDevice;
 import android.bluetooth.BluetoothSocket;
+import android.content.DialogInterface;
 import android.content.pm.PackageManager;
 import android.os.Bundle;
+import android.view.LayoutInflater;
 import android.widget.ImageButton;
 import android.widget.SeekBar;
 import android.widget.TextView;
@@ -34,6 +36,7 @@ public class MainActivity extends AppCompatActivity {
     Boolean roomLightState = true;
     int backlightState = 0;
     boolean alreadyChanged = false;
+    boolean isOncePortClosed = false;
 
 
     @Override
@@ -55,8 +58,10 @@ public class MainActivity extends AppCompatActivity {
 
 
             if (BTPairedDevices.size() == 0) {
-                Toast.makeText(this, "Please pair your device first", Toast.LENGTH_SHORT).show();
-            } else if (!btConnected) {
+                if (isAdapterEnabled()) {
+                    Toast.makeText(this, "Please pair your device first", Toast.LENGTH_SHORT).show();
+                }
+            } else if (!(btSocket != null && btSocket.isConnected())) {
                 ArrayList<String> devices = new ArrayList<>();
 
                 for (BluetoothDevice btDev : BTPairedDevices) {
@@ -79,20 +84,25 @@ public class MainActivity extends AppCompatActivity {
                                         public void run() {
                                             try {
                                                 if (ActivityCompat.checkSelfPermission(MainActivity.this, Manifest.permission.BLUETOOTH_CONNECT) != PackageManager.PERMISSION_GRANTED) {
-                                                    System.out.println("Permission not granted");
+                                                    runOnUiThread(() -> {
+                                                        Toast.makeText(MainActivity.this, "Permission not granted", Toast.LENGTH_SHORT).show();
+                                                    });
                                                     return;
                                                 }
                                                 btSocket = btDevice.createRfcommSocketToServiceRecord(myUUID);
                                                 System.out.println("Connecting to " + btDevice + " with " + myUUID);
                                                 btSocket.connect();
                                                 btConnected = true;
+                                                btBut.setImageResource(R.drawable.bt_connected);
                                                 sendMessage("`e\n", true);
                                                 System.out.println("Connected");
+                                                isOncePortClosed = false;
                                                 runOnUiThread(new Runnable() {
                                                     @Override
                                                     public void run() {
 
                                                         Toast.makeText(MainActivity.this, "Connected", Toast.LENGTH_SHORT).show();
+
                                                     }
                                                 });
                                                 try {
@@ -111,6 +121,8 @@ public class MainActivity extends AppCompatActivity {
 
                                                     try {
                                                         btSocket.close();
+
+                                                        btBut.setImageResource(R.drawable.bt_not_con);
                                                     } catch (Exception ignored) {
                                                     }
                                                 }
@@ -118,13 +130,9 @@ public class MainActivity extends AppCompatActivity {
 
                                             } catch (IOException e) {
                                                 btConnected = false;
-                                                runOnUiThread(new Runnable() {
-                                                    @Override
-                                                    public void run() {
-                                                        Toast.makeText(MainActivity.this, "Failed to connect", Toast.LENGTH_SHORT).show();
 
-                                                    }
-                                                });
+                                                btBut.setImageResource(R.drawable.bt_not_con);
+                                                runOnUiThread(() -> Toast.makeText(MainActivity.this, "Failed to connect", Toast.LENGTH_SHORT).show());
                                                 e.printStackTrace();
                                             }
                                         }
@@ -141,14 +149,28 @@ public class MainActivity extends AppCompatActivity {
                 dialog.show();
 
             } else {
-                try {
-                    btSocket.close();
-                    btConnected = false;
-                    alreadyChanged = false;
-                    Toast.makeText(this, "Bluetooth device disconnected", Toast.LENGTH_SHORT).show();
-                } catch (IOException e) {
-                    e.printStackTrace();
-                }
+                AlertDialog.Builder builder = new AlertDialog.Builder(this);
+                builder.setTitle("Are you sure want to disconnect " + selectedDevice[0] + "?");
+                builder.setPositiveButton("Ok", (dialog, which) -> {
+                    try {
+                        btSocket.close();
+                        btConnected = false;
+                        btBut.setImageResource(R.drawable.bt_not_con);
+                        alreadyChanged = false;
+                        Toast.makeText(MainActivity.this, "Bluetooth device disconnected", Toast.LENGTH_SHORT).show();
+                    } catch (IOException e) {
+                        e.printStackTrace();
+                    }
+                });
+                builder.setNegativeButton("Cancel", new DialogInterface.OnClickListener() {
+                    @Override
+                    public void onClick(DialogInterface dialog, int which) {
+
+                    }
+                });
+
+                builder.create();
+                builder.show();
             }
         });
 
@@ -192,6 +214,7 @@ public class MainActivity extends AppCompatActivity {
                         @Override
                         public void run() {
                             SeekBar seekBar = findViewById(R.id.seekBar);
+                            //Add a try catch
                             seekBar.setProgress(Integer.parseInt(splitted[1]));
                             alreadyChanged = true;
                             TextView rl = findViewById(R.id.roomLightStatus);
@@ -201,7 +224,26 @@ public class MainActivity extends AppCompatActivity {
                         }
                     });
 
+
                     defaultSettings = "";
+                }
+
+                if (!isOncePortClosed) {
+                    if (!isAdapterEnabled()) {
+                        try {
+                            btSocket.close();
+                            isOncePortClosed = true;
+                            runOnUiThread(new Runnable() {
+                                @Override
+                                public void run() {
+                                    btBut.setImageResource(R.drawable.bt_not_con);
+
+                                }
+                            });
+                        } catch (Exception ignored) {
+
+                        }
+                    }
                 }
             }
         };
@@ -221,10 +263,9 @@ public class MainActivity extends AppCompatActivity {
         CardView backlight = findViewById(R.id.backlight);
         backlight.setOnClickListener(v -> {
             sendMessage("`b\n", true);
-            if (backlightState < 2){
+            if (backlightState < 2) {
                 backlightState++;
-            }
-            else {
+            } else {
                 backlightState = 0;
             }
             TextView blm = findViewById(R.id.blm);
@@ -248,17 +289,18 @@ public class MainActivity extends AppCompatActivity {
         seekBar.setOnSeekBarChangeListener(new SeekBar.OnSeekBarChangeListener() {
             @Override
             public void onProgressChanged(SeekBar seekBar, int progress, boolean fromUser) {
-                if(alreadyChanged) {
+                if (alreadyChanged) {
                     sendMessage("`c" + progress + "\n", false);
                 }
-                defaultSettings = "";
+
             }
 
             @Override
             public void onStartTrackingTouch(SeekBar seekBar) {
-                if (!(btSocket != null && btConnected)) {
+                if (!(btSocket != null && btSocket.isConnected())) {
                     Toast.makeText(MainActivity.this, "Please connect to the bluetooth device first", Toast.LENGTH_SHORT).show();
                 }
+                defaultSettings = "";
             }
 
             @Override
