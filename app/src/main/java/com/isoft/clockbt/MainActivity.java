@@ -5,6 +5,7 @@ import android.bluetooth.BluetoothAdapter;
 import android.bluetooth.BluetoothDevice;
 import android.bluetooth.BluetoothSocket;
 import android.content.DialogInterface;
+import android.content.SharedPreferences;
 import android.content.pm.PackageManager;
 import android.os.Build;
 import android.os.Bundle;
@@ -47,25 +48,93 @@ public class MainActivity extends AppCompatActivity {
     boolean alreadyChanged = false;
     boolean isOncePortClosed = false;
 
-
     @RequiresApi(api = Build.VERSION_CODES.O)
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
+        SharedPreferences btAddress = getSharedPreferences("btAddress", MODE_PRIVATE);
+
         final UUID myUUID = UUID.fromString("00001101-0000-1000-8000-00805F9B34FB");
         final String[] selectedDevice = {""};
         ImageButton btBut = findViewById(R.id.btBut);
+        if (isAdapterEnabled()) {
+            System.out.println("Adapter enabled");
+            if (btAddress.contains("Address")) {
+                System.out.println("Address contains");
+                if (ActivityCompat.checkSelfPermission(this, Manifest.permission.BLUETOOTH_CONNECT) != PackageManager.PERMISSION_GRANTED) {
+                    Toast.makeText(this, "Bluetooth permission denied", Toast.LENGTH_SHORT).show();
+                    return;
+                }
+                BTPairedDevices = mBluetoothAdapter.getBondedDevices();
+                if(BTPairedDevices.size() > 0){
+                for (BluetoothDevice btDev : BTPairedDevices) {
+                    if (btDev.getAddress().equals(btAddress.getString("Address", ""))) {
+                        btDevice = btDev;
+                        System.out.println("Connection started");
+                        Thread connectToBT = new Thread() {
+                            public void run() {
+                                try {
+                                    if (ActivityCompat.checkSelfPermission(MainActivity.this, Manifest.permission.BLUETOOTH_CONNECT) != PackageManager.PERMISSION_GRANTED) {
+                                        runOnUiThread(() -> Toast.makeText(MainActivity.this, "Permission not granted", Toast.LENGTH_SHORT).show());
+                                        return;
+                                    }
+                                    btSocket = btDevice.createRfcommSocketToServiceRecord(myUUID);
+                                    System.out.println("Connecting to " + btDevice + " with " + myUUID);
+                                    btSocket.connect();
+                                    btConnected = true;
+                                    btBut.setImageResource(R.drawable.bt_connected);
+                                    sendMessage("`e\n", true);
+                                    System.out.println("Connected");
+                                    isOncePortClosed = false;
+                                    runOnUiThread(() -> Toast.makeText(MainActivity.this, "Connected", Toast.LENGTH_SHORT).show());
+                                    try {
+                                        byte[] buffer = new byte[1024];
+                                        int len;
+                                        do {
+                                            len = btSocket.getInputStream().read(buffer);
+                                            byte[] data = Arrays.copyOf(buffer, len);
+                                            defaultSettings += ASCIIConverter(data);
+                                            System.out.println(defaultSettings);
+                                        } while (!defaultSettings.equals(""));
+                                    } catch (Exception e) {
+
+                                        try {
+                                            btSocket.close();
+
+                                            btBut.setImageResource(R.drawable.bt_not_con);
+                                        } catch (Exception ignored) {
+                                        }
+                                    }
+
+
+                                } catch (IOException e) {
+                                    btConnected = false;
+
+                                    btBut.setImageResource(R.drawable.bt_not_con);
+                                    runOnUiThread(() -> Toast.makeText(MainActivity.this, "Failed to connect", Toast.LENGTH_SHORT).show());
+                                    e.printStackTrace();
+                                }
+                            }
+
+                        };
+
+                        connectToBT.start();
+                    }
+                }
+                }
+            }
+        }
         btBut.setOnClickListener(v -> {
             if (!isAdapterEnabled()) {
                 Toast.makeText(this, "Please enable bluetooth before continuing", Toast.LENGTH_SHORT).show();
             }
             if (ActivityCompat.checkSelfPermission(this, android.Manifest.permission.BLUETOOTH_CONNECT) != PackageManager.PERMISSION_GRANTED) {
                 System.out.println("Permission not granted");
+                Toast.makeText(this, "Permission not granted", Toast.LENGTH_LONG).show();
                 return;
             }
             BTPairedDevices = mBluetoothAdapter.getBondedDevices();
-
 
             if (BTPairedDevices.size() == 0) {
                 if (isAdapterEnabled()) {
@@ -74,11 +143,16 @@ public class MainActivity extends AppCompatActivity {
             } else if (!(btSocket != null && btSocket.isConnected())) {
                 ArrayList<String> devices = new ArrayList<>();
 
+                if (ActivityCompat.checkSelfPermission(MainActivity.this, Manifest.permission.BLUETOOTH_CONNECT) != PackageManager.PERMISSION_GRANTED) {
+                    runOnUiThread(() -> Toast.makeText(MainActivity.this, "Permission not granted", Toast.LENGTH_SHORT).show());
+                    return;
+                }
+
                 for (BluetoothDevice btDev : BTPairedDevices) {
                     devices.add(btDev.getName());
                 }
                 AlertDialog.Builder builder = new AlertDialog.Builder(this);
-                builder.setTitle("Choose the device");
+                builder.setTitle("Choose the device to pair");
 
                 builder.setItems(arrayConverter(devices),
                         (dialog, which) -> {
@@ -88,6 +162,9 @@ public class MainActivity extends AppCompatActivity {
                             for (BluetoothDevice btDev : BTPairedDevices) {
                                 if (selectedDevice[0].equals(btDev.getName())) {
                                     btDevice = btDev;
+                                    SharedPreferences.Editor editBt = btAddress.edit();
+                                    editBt.putString("Address", btDevice.getAddress());
+                                    editBt.apply();
                                     System.out.println(btDevice);
                                     //Connect using a different thread
                                     Thread connectToBT = new Thread() {
@@ -246,7 +323,7 @@ public class MainActivity extends AppCompatActivity {
             AlertDialog.Builder builder = new AlertDialog.Builder(this);
             builder.setTitle("Are you sure want to set the time?");
             builder.setPositiveButton("Ok", (dialog, which) -> {
-                String message = "";
+                String message;
                 LocalDateTime now = LocalDateTime.now();
                 DateTimeFormatter dtfYear = DateTimeFormatter.ofPattern("y");
                 DateTimeFormatter dtfMonth = DateTimeFormatter.ofPattern("M");
@@ -263,11 +340,8 @@ public class MainActivity extends AppCompatActivity {
                 message = "`d" + year + month + date + dow + hour + minute;
                 sendMessage(message, true);
                     });
-            builder.setNegativeButton("Cancel", new DialogInterface.OnClickListener() {
-                @Override
-                public void onClick(DialogInterface dialog, int which) {
+            builder.setNegativeButton("Cancel", (dialog, which) -> {
 
-                }
             });
             builder.create();
             builder.show();
