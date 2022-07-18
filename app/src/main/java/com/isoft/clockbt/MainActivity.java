@@ -283,22 +283,33 @@ public class MainActivity extends AppCompatActivity {
 
         CardView timeSet = findViewById(R.id.timeSet);
         timeSet.setOnClickListener(v -> {
-            String message = "";
-            LocalDateTime now = LocalDateTime.now();
-            DateTimeFormatter dtfYear = DateTimeFormatter.ofPattern("y");
-            DateTimeFormatter dtfMonth = DateTimeFormatter.ofPattern("M");
-            DateTimeFormatter dtfDate = DateTimeFormatter.ofPattern("d");
-            DateTimeFormatter dtfDow = DateTimeFormatter.ofPattern("e");
-            DateTimeFormatter dtfHour = DateTimeFormatter.ofPattern("H");
-            DateTimeFormatter dtfMinute = DateTimeFormatter.ofPattern("m");
-            year = dtfYear.format(now).substring(2);
-            month = zeroFormatter(dtfMonth.format(now));
-            date = zeroFormatter(dtfDate.format(now));
-            dow = dtfDow.format(now);
-            hour = zeroFormatter(dtfHour.format(now));
-            minute = zeroFormatter(dtfMinute.format(now));
-            message = "`d" + year + month + date + dow + hour + minute;
-            sendMessage(message, true);
+            AlertDialog.Builder builder = new AlertDialog.Builder(this);
+            builder.setTitle("Are you sure want to set the time? " + selectedDevice[0] + "?");
+            builder.setPositiveButton("Ok", (dialog, which) -> {
+                String message = "";
+                LocalDateTime now = LocalDateTime.now();
+                DateTimeFormatter dtfYear = DateTimeFormatter.ofPattern("y");
+                DateTimeFormatter dtfMonth = DateTimeFormatter.ofPattern("M");
+                DateTimeFormatter dtfDate = DateTimeFormatter.ofPattern("d");
+                DateTimeFormatter dtfDow = DateTimeFormatter.ofPattern("e");
+                DateTimeFormatter dtfHour = DateTimeFormatter.ofPattern("H");
+                DateTimeFormatter dtfMinute = DateTimeFormatter.ofPattern("m");
+                year = dtfYear.format(now).substring(2);
+                month = zeroFormatter(dtfMonth.format(now));
+                date = zeroFormatter(dtfDate.format(now));
+                dow = dtfDow.format(now);
+                hour = zeroFormatter(dtfHour.format(now));
+                minute = zeroFormatter(dtfMinute.format(now));
+                message = "`d" + year + month + date + dow + hour + minute;
+                sendMessage(message, true);
+                    });
+            builder.setNegativeButton("Cancel", new DialogInterface.OnClickListener() {
+                @Override
+                public void onClick(DialogInterface dialog, int which) {
+
+                }
+            });
+
         });
 
 
