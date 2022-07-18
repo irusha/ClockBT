@@ -284,7 +284,7 @@ public class MainActivity extends AppCompatActivity {
         CardView timeSet = findViewById(R.id.timeSet);
         timeSet.setOnClickListener(v -> {
             AlertDialog.Builder builder = new AlertDialog.Builder(this);
-            builder.setTitle("Are you sure want to set the time? " + selectedDevice[0] + "?");
+            builder.setTitle("Are you sure want to set the time?");
             builder.setPositiveButton("Ok", (dialog, which) -> {
                 String message = "";
                 LocalDateTime now = LocalDateTime.now();
@@ -309,6 +309,8 @@ public class MainActivity extends AppCompatActivity {
 
                 }
             });
+            builder.create();
+            builder.show();
 
         });
 
