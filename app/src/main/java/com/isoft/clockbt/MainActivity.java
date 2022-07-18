@@ -8,7 +8,6 @@ import android.content.DialogInterface;
 import android.content.pm.PackageManager;
 import android.os.Build;
 import android.os.Bundle;
-import android.view.LayoutInflater;
 import android.widget.ImageButton;
 import android.widget.SeekBar;
 import android.widget.TextView;
@@ -95,9 +94,7 @@ public class MainActivity extends AppCompatActivity {
                                         public void run() {
                                             try {
                                                 if (ActivityCompat.checkSelfPermission(MainActivity.this, Manifest.permission.BLUETOOTH_CONNECT) != PackageManager.PERMISSION_GRANTED) {
-                                                    runOnUiThread(() -> {
-                                                        Toast.makeText(MainActivity.this, "Permission not granted", Toast.LENGTH_SHORT).show();
-                                                    });
+                                                    runOnUiThread(() -> Toast.makeText(MainActivity.this, "Permission not granted", Toast.LENGTH_SHORT).show());
                                                     return;
                                                 }
                                                 btSocket = btDevice.createRfcommSocketToServiceRecord(myUUID);
@@ -108,26 +105,16 @@ public class MainActivity extends AppCompatActivity {
                                                 sendMessage("`e\n", true);
                                                 System.out.println("Connected");
                                                 isOncePortClosed = false;
-                                                runOnUiThread(new Runnable() {
-                                                    @Override
-                                                    public void run() {
-
-                                                        Toast.makeText(MainActivity.this, "Connected", Toast.LENGTH_SHORT).show();
-
-                                                    }
-                                                });
+                                                runOnUiThread(() -> Toast.makeText(MainActivity.this, "Connected", Toast.LENGTH_SHORT).show());
                                                 try {
                                                     byte[] buffer = new byte[1024];
                                                     int len;
-                                                    while (true) {
+                                                    do {
                                                         len = btSocket.getInputStream().read(buffer);
                                                         byte[] data = Arrays.copyOf(buffer, len);
                                                         defaultSettings += ASCIIConverter(data);
                                                         System.out.println(defaultSettings);
-                                                        if (defaultSettings.equals("")) {
-                                                            break;
-                                                        }
-                                                    }
+                                                    } while (!defaultSettings.equals(""));
                                                 } catch (Exception e) {
 
                                                     try {
@@ -173,11 +160,8 @@ public class MainActivity extends AppCompatActivity {
                         e.printStackTrace();
                     }
                 });
-                builder.setNegativeButton("Cancel", new DialogInterface.OnClickListener() {
-                    @Override
-                    public void onClick(DialogInterface dialog, int which) {
+                builder.setNegativeButton("Cancel", (dialog, which) -> {
 
-                    }
                 });
 
                 builder.create();
@@ -194,51 +178,39 @@ public class MainActivity extends AppCompatActivity {
                     System.out.println(splitted[0]);
                     switch (splitted[0]) {
                         case "0":
-                            runOnUiThread(new Runnable() {
-                                @Override
-                                public void run() {
-                                    TextView blm = findViewById(R.id.blm);
-                                    blm.setText("Intelligent");
-                                }
+                            runOnUiThread(() -> {
+                                TextView blm = findViewById(R.id.blm);
+                                blm.setText("Intelligent");
                             });
 
                             break;
                         case "1":
-                            runOnUiThread(new Runnable() {
-                                @Override
-                                public void run() {
-                                    TextView blm = findViewById(R.id.blm);
-                                    blm.setText("Off");
-                                }
+                            runOnUiThread(() -> {
+                                TextView blm = findViewById(R.id.blm);
+                                blm.setText("Off");
                             });
                             break;
                         case "2":
-                            runOnUiThread(new Runnable() {
-                                @Override
-                                public void run() {
-                                    TextView blm = findViewById(R.id.blm);
-                                    blm.setText("On");
-                                }
+                            runOnUiThread(() -> {
+                                TextView blm = findViewById(R.id.blm);
+                                blm.setText("On");
                             });
                             break;
                     }
-                    runOnUiThread(new Runnable() {
-                        @Override
-                        public void run() {
-                            SeekBar seekBar = findViewById(R.id.seekBar);
-                            try {
-                                seekBar.setProgress(Integer.parseInt(splitted[1]));
-                                alreadyChanged = true;
-                                TextView rl = findViewById(R.id.roomLightStatus);
-                                backlightState = Integer.parseInt(splitted[0]);
-                                roomLightState = !splitted[2].equals("0");
-                                rl.setText(splitted[2].equals("0") ? "Off" : "On");
-                            } catch (Exception e) {
-                                defaultSettings = "";
-                                sendMessage("`e", false);
-                            }
-
+                    runOnUiThread(() -> {
+                        SeekBar seekBar = findViewById(R.id.seekBar);
+                        try {
+                            seekBar.setProgress(Integer.parseInt(splitted[1]));
+                            alreadyChanged = true;
+                            TextView rl = findViewById(R.id.roomLightStatus);
+                            backlightState = Integer.parseInt(splitted[0]);
+                            roomLightState = !splitted[2].equals("0");
+                            rl.setText(splitted[2].equals("0") ? "Off" : "On");
+                        } catch (Exception e) {
+                            defaultSettings = "";
+                            sendMessage("`e", false);
                         }
+
                     });
 
 
@@ -250,13 +222,7 @@ public class MainActivity extends AppCompatActivity {
                         try {
                             btSocket.close();
                             isOncePortClosed = true;
-                            runOnUiThread(new Runnable() {
-                                @Override
-                                public void run() {
-                                    btBut.setImageResource(R.drawable.bt_not_con);
-
-                                }
-                            });
+                            runOnUiThread(() -> btBut.setImageResource(R.drawable.bt_not_con));
                         } catch (Exception ignored) {
 
                         }
@@ -266,19 +232,13 @@ public class MainActivity extends AppCompatActivity {
                 TextView timeShow = findViewById(R.id.time);
                 DateTimeFormatter dtf = DateTimeFormatter.ofPattern("HH:mm");
                 LocalDateTime now = LocalDateTime.now();
-                runOnUiThread(new Runnable() {
-                    @Override
-                    public void run() {
-
-                        timeShow.setText(dtf.format(now));
-                    }
-                });
+                runOnUiThread(() -> timeShow.setText(dtf.format(now)));
 
 
             }
         };
 
-        Timer timer = new Timer("aaaa");
+        Timer timer = new Timer("LayoutSet");
         timer.schedule(setLayouts, 0, 100);
 
         CardView timeSet = findViewById(R.id.timeSet);
