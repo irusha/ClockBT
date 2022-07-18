@@ -153,6 +153,7 @@
             android:foreground="?android:attr/selectableItemBackground"
             android:clickable="true"
             android:focusable="true"
+            android:id="@+id/timeSet"
             android:layout_margin="20dp"
             android:elevation="10dp"
             app:cardCornerRadius="10dp">
@@ -166,14 +167,15 @@
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
                     android:padding="11dp"
-                    android:text="Set Date/Time"
                     android:id="@+id/dateTime"
+                    android:text="Set Date/Time"
                     android:textSize="29sp" />
                 <TextView
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
                     android:paddingStart="11dp"
-                    android:text="@string/on"
+                    android:id="@+id/time"
+                    tools:text="@string/on"
                     android:textSize="20sp" />
             </LinearLayout>
 

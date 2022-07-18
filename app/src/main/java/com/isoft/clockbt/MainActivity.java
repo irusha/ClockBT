@@ -6,6 +6,7 @@ import android.bluetooth.BluetoothDevice;
 import android.bluetooth.BluetoothSocket;
 import android.content.DialogInterface;
 import android.content.pm.PackageManager;
+import android.os.Build;
 import android.os.Bundle;
 import android.view.LayoutInflater;
 import android.widget.ImageButton;
@@ -13,12 +14,15 @@ import android.widget.SeekBar;
 import android.widget.TextView;
 import android.widget.Toast;
 
+import androidx.annotation.RequiresApi;
 import androidx.appcompat.app.AlertDialog;
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.cardview.widget.CardView;
 import androidx.core.app.ActivityCompat;
 
 import java.io.IOException;
+import java.time.LocalDateTime;
+import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Set;
@@ -35,10 +39,17 @@ public class MainActivity extends AppCompatActivity {
     boolean btConnected = false;
     Boolean roomLightState = true;
     int backlightState = 0;
+    String hour = "";
+    String minute = "";
+    String year = "";
+    String month = "";
+    String date = "";
+    String dow = "";
     boolean alreadyChanged = false;
     boolean isOncePortClosed = false;
 
 
+    @RequiresApi(api = Build.VERSION_CODES.O)
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
@@ -175,6 +186,7 @@ public class MainActivity extends AppCompatActivity {
         });
 
         TimerTask setLayouts = new TimerTask() {
+            @RequiresApi(api = Build.VERSION_CODES.O)
             @Override
             public void run() {
                 if (!defaultSettings.equals("")) {
@@ -221,8 +233,7 @@ public class MainActivity extends AppCompatActivity {
                                 backlightState = Integer.parseInt(splitted[0]);
                                 roomLightState = !splitted[2].equals("0");
                                 rl.setText(splitted[2].equals("0") ? "Off" : "On");
-                            }
-                            catch (Exception e){
+                            } catch (Exception e) {
                                 defaultSettings = "";
                                 sendMessage("`e", false);
                             }
@@ -251,11 +262,44 @@ public class MainActivity extends AppCompatActivity {
                         }
                     }
                 }
+
+                TextView timeShow = findViewById(R.id.time);
+                DateTimeFormatter dtf = DateTimeFormatter.ofPattern("HH:mm");
+                LocalDateTime now = LocalDateTime.now();
+                runOnUiThread(new Runnable() {
+                    @Override
+                    public void run() {
+
+                        timeShow.setText(dtf.format(now));
+                    }
+                });
+
+
             }
         };
 
         Timer timer = new Timer("aaaa");
         timer.schedule(setLayouts, 0, 100);
+
+        CardView timeSet = findViewById(R.id.timeSet);
+        timeSet.setOnClickListener(v -> {
+            String message = "";
+            LocalDateTime now = LocalDateTime.now();
+            DateTimeFormatter dtfYear = DateTimeFormatter.ofPattern("y");
+            DateTimeFormatter dtfMonth = DateTimeFormatter.ofPattern("M");
+            DateTimeFormatter dtfDate = DateTimeFormatter.ofPattern("d");
+            DateTimeFormatter dtfDow = DateTimeFormatter.ofPattern("e");
+            DateTimeFormatter dtfHour = DateTimeFormatter.ofPattern("H");
+            DateTimeFormatter dtfMinute = DateTimeFormatter.ofPattern("m");
+            year = dtfYear.format(now).substring(2);
+            month = zeroFormatter(dtfMonth.format(now));
+            date = zeroFormatter(dtfDate.format(now));
+            dow = dtfDow.format(now);
+            hour = zeroFormatter(dtfHour.format(now));
+            minute = zeroFormatter(dtfMinute.format(now));
+            message = "`d" + year + month + date + dow + hour + minute;
+            sendMessage(message, true);
+        });
 
 
         CardView light = findViewById(R.id.roomLight);
@@ -330,6 +374,14 @@ public class MainActivity extends AppCompatActivity {
             if (toast) {
                 Toast.makeText(this, "Please connect to the bluetooth device first", Toast.LENGTH_SHORT).show();
             }
+        }
+    }
+
+    private String zeroFormatter(String number) {
+        if (Integer.parseInt(number) < 10) {
+            return "0" + number;
+        } else {
+            return number;
         }
     }
 
