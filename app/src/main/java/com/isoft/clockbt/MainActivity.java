@@ -214,13 +214,19 @@ public class MainActivity extends AppCompatActivity {
                         @Override
                         public void run() {
                             SeekBar seekBar = findViewById(R.id.seekBar);
-                            //Add a try catch
-                            seekBar.setProgress(Integer.parseInt(splitted[1]));
-                            alreadyChanged = true;
-                            TextView rl = findViewById(R.id.roomLightStatus);
-                            backlightState = Integer.parseInt(splitted[0]);
-                            roomLightState = !splitted[2].equals("0");
-                            rl.setText(splitted[2].equals("0") ? "Off" : "On");
+                            try {
+                                seekBar.setProgress(Integer.parseInt(splitted[1]));
+                                alreadyChanged = true;
+                                TextView rl = findViewById(R.id.roomLightStatus);
+                                backlightState = Integer.parseInt(splitted[0]);
+                                roomLightState = !splitted[2].equals("0");
+                                rl.setText(splitted[2].equals("0") ? "Off" : "On");
+                            }
+                            catch (Exception e){
+                                defaultSettings = "";
+                                sendMessage("`e", false);
+                            }
+
                         }
                     });
 
