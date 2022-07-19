@@ -7,6 +7,7 @@ import android.bluetooth.BluetoothDevice;
 import android.bluetooth.BluetoothSocket;
 import android.content.Context;
 import android.content.DialogInterface;
+import android.content.Intent;
 import android.content.SharedPreferences;
 import android.content.pm.PackageManager;
 import android.os.Build;
@@ -140,6 +141,7 @@ public class MainActivity extends AppCompatActivity {
                 builder.setPositiveButton("Ok", (dialog, which) -> {
                     try {
                         btSocket.close();
+                        stopService(new Intent(MainActivity.this, WatchNotifications.class));
                         btConnected = false;
                         btBut.setImageResource(R.drawable.bt_not_con);
                         alreadyChanged = false;
@@ -210,6 +212,8 @@ public class MainActivity extends AppCompatActivity {
                         try {
                             btSocket.close();
                             isOncePortClosed = true;
+
+                            stopService(new Intent(MainActivity.this, WatchNotifications.class));
                             runOnUiThread(() -> btBut.setImageResource(R.drawable.bt_not_con));
                         } catch (Exception ignored) {
 
@@ -359,12 +363,13 @@ public class MainActivity extends AppCompatActivity {
 
                     btSocket = btDevice.createRfcommSocketToServiceRecord(myUUID);
                     System.out.println("Connecting to " + btDevice + " with " + myUUID);
+                    runOnUiThread(() -> Toast.makeText(MainActivity.this, "Connecting to " + btDevice.getName(), Toast.LENGTH_SHORT).show());
                     btSocket.connect();
                     btConnected = true;
                     btBut.setImageResource(R.drawable.bt_connected);
                     sendMessage("`e\n", true);
                     System.out.println("Connected");
-
+                    startService(new Intent(MainActivity.this, WatchNotifications.class));
                     isOncePortClosed = false;
                     runOnUiThread(() -> {
                         Toast.makeText(MainActivity.this, "Connected", Toast.LENGTH_SHORT).show();
@@ -388,7 +393,6 @@ public class MainActivity extends AppCompatActivity {
                         } catch (Exception ignored) {
                         }
                     }
-
 
                 } catch (IOException e) {
                     btConnected = false;
