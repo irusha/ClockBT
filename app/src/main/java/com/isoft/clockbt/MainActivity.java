@@ -45,7 +45,7 @@ public class MainActivity extends AppCompatActivity {
     Set<BluetoothDevice> BTPairedDevices = null;
     BluetoothDevice btDevice = null;
     BluetoothAdapter mBluetoothAdapter = BluetoothAdapter.getDefaultAdapter();
-    BluetoothSocket btSocket = null;
+    public BluetoothSocket btSocket = null;
     boolean btConnected = false;
     Boolean roomLightState = true;
     int backlightState = 0;
@@ -55,6 +55,7 @@ public class MainActivity extends AppCompatActivity {
     String month = "";
     String date = "";
     String dow = "";
+    ImageButton btBut;
     boolean alreadyChanged = false;
     boolean isOncePortClosed = false;
 
@@ -354,7 +355,7 @@ public class MainActivity extends AppCompatActivity {
 
     private void connectToDevice(){
 
-        ImageButton btBut = findViewById(R.id.btBut);
+        btBut = findViewById(R.id.btBut);
         final UUID myUUID = UUID.fromString("00001101-0000-1000-8000-00805F9B34FB");
         Thread connectToBT = new Thread() {
             public void run() {
@@ -374,7 +375,9 @@ public class MainActivity extends AppCompatActivity {
                     btBut.setImageResource(R.drawable.bt_connected);
                     sendMessage("`e\n", true);
                     System.out.println("Connected");
-                    startService(new Intent(MainActivity.this, WatchNotifications.class));
+                    Intent serviceIntent = new Intent(MainActivity.this, WatchNotifications.class);
+                    serviceIntent.putExtra("BtAddress", btDevice);
+                    startService(serviceIntent);
                     isOncePortClosed = false;
                     runOnUiThread(() -> {
                         Toast.makeText(MainActivity.this, "Connected", Toast.LENGTH_SHORT).show();
