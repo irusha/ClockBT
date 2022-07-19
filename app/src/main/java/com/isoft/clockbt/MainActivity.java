@@ -1,14 +1,18 @@
 package com.isoft.clockbt;
 
 import android.Manifest;
+import android.app.NotificationManager;
 import android.bluetooth.BluetoothAdapter;
 import android.bluetooth.BluetoothDevice;
 import android.bluetooth.BluetoothSocket;
+import android.content.Context;
 import android.content.DialogInterface;
 import android.content.SharedPreferences;
 import android.content.pm.PackageManager;
 import android.os.Build;
 import android.os.Bundle;
+import android.view.LayoutInflater;
+import android.view.View;
 import android.widget.ImageButton;
 import android.widget.SeekBar;
 import android.widget.TextView;
@@ -19,6 +23,7 @@ import androidx.appcompat.app.AlertDialog;
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.cardview.widget.CardView;
 import androidx.core.app.ActivityCompat;
+import androidx.core.app.NotificationCompat;
 
 import java.io.IOException;
 import java.time.LocalDateTime;
@@ -55,72 +60,25 @@ public class MainActivity extends AppCompatActivity {
         setContentView(R.layout.activity_main);
         SharedPreferences btAddress = getSharedPreferences("btAddress", MODE_PRIVATE);
 
-        final UUID myUUID = UUID.fromString("00001101-0000-1000-8000-00805F9B34FB");
+
         final String[] selectedDevice = {""};
         ImageButton btBut = findViewById(R.id.btBut);
+
         if (isAdapterEnabled()) {
-            System.out.println("Adapter enabled");
             if (btAddress.contains("Address")) {
-                System.out.println("Address contains");
                 if (ActivityCompat.checkSelfPermission(this, Manifest.permission.BLUETOOTH_CONNECT) != PackageManager.PERMISSION_GRANTED) {
                     Toast.makeText(this, "Bluetooth permission denied", Toast.LENGTH_SHORT).show();
                     return;
                 }
                 BTPairedDevices = mBluetoothAdapter.getBondedDevices();
-                if(BTPairedDevices.size() > 0){
-                for (BluetoothDevice btDev : BTPairedDevices) {
-                    if (btDev.getAddress().equals(btAddress.getString("Address", ""))) {
-                        btDevice = btDev;
-                        System.out.println("Connection started");
-                        Thread connectToBT = new Thread() {
-                            public void run() {
-                                try {
-                                    if (ActivityCompat.checkSelfPermission(MainActivity.this, Manifest.permission.BLUETOOTH_CONNECT) != PackageManager.PERMISSION_GRANTED) {
-                                        runOnUiThread(() -> Toast.makeText(MainActivity.this, "Permission not granted", Toast.LENGTH_SHORT).show());
-                                        return;
-                                    }
-                                    btSocket = btDevice.createRfcommSocketToServiceRecord(myUUID);
-                                    System.out.println("Connecting to " + btDevice + " with " + myUUID);
-                                    btSocket.connect();
-                                    btConnected = true;
-                                    btBut.setImageResource(R.drawable.bt_connected);
-                                    sendMessage("`e\n", true);
-                                    System.out.println("Connected");
-                                    isOncePortClosed = false;
-                                    runOnUiThread(() -> Toast.makeText(MainActivity.this, "Connected", Toast.LENGTH_SHORT).show());
-                                    try {
-                                        byte[] buffer = new byte[1024];
-                                        int len;
-                                        do {
-                                            len = btSocket.getInputStream().read(buffer);
-                                            byte[] data = Arrays.copyOf(buffer, len);
-                                            defaultSettings += ASCIIConverter(data);
-                                            System.out.println(defaultSettings);
-                                        } while (!defaultSettings.equals(""));
-                                    } catch (Exception e) {
+                if (BTPairedDevices.size() > 0) {
+                    for (BluetoothDevice btDev : BTPairedDevices) {
+                        if (btDev.getAddress().equals(btAddress.getString("Address", ""))) {
+                            btDevice = btDev;
+                            System.out.println("Connection started");
+                            connectToDevice();
 
-                                        try {
-                                            btSocket.close();
-
-                                            btBut.setImageResource(R.drawable.bt_not_con);
-                                        } catch (Exception ignored) {
-                                        }
-                                    }
-
-
-                                } catch (IOException e) {
-                                    btConnected = false;
-
-                                    btBut.setImageResource(R.drawable.bt_not_con);
-                                    runOnUiThread(() -> Toast.makeText(MainActivity.this, "Failed to connect", Toast.LENGTH_SHORT).show());
-                                    e.printStackTrace();
-                                }
                             }
-
-                        };
-
-                        connectToBT.start();
-                    }
                 }
                 }
             }
@@ -167,54 +125,7 @@ public class MainActivity extends AppCompatActivity {
                                     editBt.apply();
                                     System.out.println(btDevice);
                                     //Connect using a different thread
-                                    Thread connectToBT = new Thread() {
-                                        public void run() {
-                                            try {
-                                                if (ActivityCompat.checkSelfPermission(MainActivity.this, Manifest.permission.BLUETOOTH_CONNECT) != PackageManager.PERMISSION_GRANTED) {
-                                                    runOnUiThread(() -> Toast.makeText(MainActivity.this, "Permission not granted", Toast.LENGTH_SHORT).show());
-                                                    return;
-                                                }
-                                                btSocket = btDevice.createRfcommSocketToServiceRecord(myUUID);
-                                                System.out.println("Connecting to " + btDevice + " with " + myUUID);
-                                                btSocket.connect();
-                                                btConnected = true;
-                                                btBut.setImageResource(R.drawable.bt_connected);
-                                                sendMessage("`e\n", true);
-                                                System.out.println("Connected");
-                                                isOncePortClosed = false;
-                                                runOnUiThread(() -> Toast.makeText(MainActivity.this, "Connected", Toast.LENGTH_SHORT).show());
-                                                try {
-                                                    byte[] buffer = new byte[1024];
-                                                    int len;
-                                                    do {
-                                                        len = btSocket.getInputStream().read(buffer);
-                                                        byte[] data = Arrays.copyOf(buffer, len);
-                                                        defaultSettings += ASCIIConverter(data);
-                                                        System.out.println(defaultSettings);
-                                                    } while (!defaultSettings.equals(""));
-                                                } catch (Exception e) {
-
-                                                    try {
-                                                        btSocket.close();
-
-                                                        btBut.setImageResource(R.drawable.bt_not_con);
-                                                    } catch (Exception ignored) {
-                                                    }
-                                                }
-
-
-                                            } catch (IOException e) {
-                                                btConnected = false;
-
-                                                btBut.setImageResource(R.drawable.bt_not_con);
-                                                runOnUiThread(() -> Toast.makeText(MainActivity.this, "Failed to connect", Toast.LENGTH_SHORT).show());
-                                                e.printStackTrace();
-                                            }
-                                        }
-
-                                    };
-
-                                    connectToBT.start();
+                                    connectToDevice();
 
                                 }
                             }
@@ -430,6 +341,68 @@ public class MainActivity extends AppCompatActivity {
         } else {
             return number;
         }
+    }
+
+    private void connectToDevice(){
+
+        ImageButton btBut = findViewById(R.id.btBut);
+        final UUID myUUID = UUID.fromString("00001101-0000-1000-8000-00805F9B34FB");
+        Thread connectToBT = new Thread() {
+            public void run() {
+                if (ActivityCompat.checkSelfPermission(MainActivity.this, Manifest.permission.BLUETOOTH_CONNECT) != PackageManager.PERMISSION_GRANTED) {
+                    runOnUiThread(() -> Toast.makeText(MainActivity.this, "Permission not granted", Toast.LENGTH_SHORT).show());
+                    return;
+                }
+
+
+                try {
+
+                    btSocket = btDevice.createRfcommSocketToServiceRecord(myUUID);
+                    System.out.println("Connecting to " + btDevice + " with " + myUUID);
+                    btSocket.connect();
+                    btConnected = true;
+                    btBut.setImageResource(R.drawable.bt_connected);
+                    sendMessage("`e\n", true);
+                    System.out.println("Connected");
+
+                    isOncePortClosed = false;
+                    runOnUiThread(() -> {
+                        Toast.makeText(MainActivity.this, "Connected", Toast.LENGTH_SHORT).show();
+
+                    });
+                    try {
+                        byte[] buffer = new byte[1024];
+                        int len;
+                        do {
+                            len = btSocket.getInputStream().read(buffer);
+                            byte[] data = Arrays.copyOf(buffer, len);
+                            defaultSettings += ASCIIConverter(data);
+                            System.out.println(defaultSettings);
+                        } while (!defaultSettings.equals(""));
+                    } catch (Exception e) {
+
+                        try {
+                            btSocket.close();
+
+                            btBut.setImageResource(R.drawable.bt_not_con);
+                        } catch (Exception ignored) {
+                        }
+                    }
+
+
+                } catch (IOException e) {
+                    btConnected = false;
+
+                    btBut.setImageResource(R.drawable.bt_not_con);
+                    runOnUiThread(() -> Toast.makeText(MainActivity.this, "Failed to connect", Toast.LENGTH_SHORT).show());
+                    e.printStackTrace();
+                }
+            }
+
+        };
+
+        connectToBT.start();
+
     }
 
     private static String[] arrayConverter(ArrayList<String> array) {
